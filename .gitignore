@@ -1,0 +1,6 @@
+__pycache__/
+*.pyc
+*.tmp
+assets/marca/_estado-avatar.json
+assets/marca/avatar-opcion-*.png
+.env*

@@ -1,0 +1,58 @@
+{
+  "titulo": "5 trucos para usar ChatGPT mejor",
+  "estilo": "rosa-palo-animado",
+  "formato": "4:5",
+  "resolucion": "2K",
+  "avatar": true,
+  "slides": [
+    {
+      "tipo": "portada",
+      "antetitulo": "Guía rápida",
+      "titulo": "Deja de usar ChatGPT así",
+      "subtitulo": "5 trucos para resultados 10 veces mejores",
+      "escena": "Yadira's avatar looks surprised and amused, holding a giant rounded 3D smartphone that shows a big chat bubble icon with a small red 'x' mark. A small cute pink-and-white helper robot peeks from behind her shoulder. Soft sparkles around."
+    },
+    {
+      "tipo": "contenido",
+      "numero": "01",
+      "titulo": "Dale un papel",
+      "texto": "Empieza con «Actúa como experto en…». La IA ajusta el tono, el nivel y los ejemplos a ese rol.",
+      "escena": "Yadira's avatar places a tiny graduation cap on the cute pink helper robot, which smiles proudly. A floating 3D chat bubble icon next to them."
+    },
+    {
+      "tipo": "contenido",
+      "numero": "02",
+      "titulo": "Explica el contexto",
+      "puntos": ["Para quién es", "Para qué lo usarás", "Qué tono quieres"],
+      "escena": "Yadira's avatar points at a floating holographic white board with three simple pink icons (a person, a target, a speech bubble), explaining like a friendly teacher."
+    },
+    {
+      "tipo": "contenido",
+      "numero": "03",
+      "titulo": "Pide un formato",
+      "texto": "Tabla, lista, correo o guion: dile cómo quieres la respuesta y te ahorrarás editarla después.",
+      "escena": "Yadira's avatar juggles three floating 3D cards: one with a table icon, one with a list icon, one with an envelope icon. Playful and confident expression."
+    },
+    {
+      "tipo": "contenido",
+      "numero": "04",
+      "titulo": "Dale ejemplos",
+      "texto": "Pega un texto que te guste y pide «escribe en este estilo». Copiará el tono mucho mejor.",
+      "escena": "Yadira's avatar hands a pink paper sheet icon to the cute helper robot, who scans it with a soft glowing pink light from its eyes."
+    },
+    {
+      "tipo": "contenido",
+      "numero": "05",
+      "titulo": "Pide que mejore",
+      "texto": "Al terminar, escribe «hazlo más corto y claro» o «dame tres versiones». La segunda respuesta casi siempre gana.",
+      "escena": "Yadira's avatar gives a thumbs up next to three floating 3D chat bubbles growing from small to big, with sparkles on the biggest one."
+    },
+    {
+      "tipo": "cta",
+      "titulo": "¿Te ha servido?",
+      "texto": "Sígueme en @yadira.official para aprender IA cada día",
+      "botones": ["Seguir", "Guardar"],
+      "escena": "Yadira's avatar waves warmly at the viewer with a big smile, the cute pink helper robot waves too, floating 3D hearts and sparkles around them."
+    }
+  ]
+}
