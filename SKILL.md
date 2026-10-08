@@ -18,7 +18,8 @@ Tú escribes el guion y las escenas en un `carrusel.json`; el script `kie_carrus
 ├── slides/           ← slide-01.png … slide-07.png (para subir a Instagram)
 ├── vista-previa.png  ← todas las slides en una hoja
 ├── carrusel.pdf      ← una página por slide
-└── caption.md        ← texto del post + hashtags (lo escribes tú)
+├── caption.md        ← texto del post + hashtags (lo escribes tú)
+└── publicacion.json  ← resultado de publicar en Instagram (lo genera upload_post.py)
 ```
 
 `SKILL_DIR` = `~/.claude/skills/carrusel-ig`. El script solo usa la librería estándar de Python (PyMuPDF, ya instalado, para la vista previa y el PDF). La clave de Kie.ai está en `~/.env-kie`; nunca pidas que la peguen en el chat.
@@ -132,10 +133,20 @@ python SKILL_DIR/scripts/kie_carrusel.py generar "CARPETA" --solo 3,5
 
 Si regeneras la **portada** (`--solo 1`), el resto ya no la tendrá como referencia: regenera todo (`--solo 1,2,3,4,5,6,7`) o acepta la diferencia. Máximo dos rondas por slide; si el texto sigue fallando, acórtalo. No entregues slides con faltas.
 
-## 8. Entregar
+## 8. Entregar y publicar
 
-1. Escribe `caption.md`: un pie de post de 3–6 líneas en el tono de Yadira (gancho, valor, pregunta para comentarios, recordatorio de seguir/guardar), 5–10 hashtags relevantes en español e inglés, y en noticias, las fuentes.
-2. Envía `vista-previa.png` con SendUserFile y dile dónde están las slides (`slides/`, en orden para subir a Instagram), qué contiene cada una en una línea y cuántos créditos se gastaron (el log muestra el saldo antes y después).
+1. Escribe `caption.md`: un pie de post de 3–6 líneas en el tono de Yadira (gancho, valor, pregunta para comentarios, recordatorio de seguir/guardar), 5–10 hashtags relevantes en español e inglés, y en noticias, las fuentes. Máximo 2.200 caracteres y 30 hashtags (límites de Instagram).
+2. Abre la **página de resultados**: arranca `python SKILL_DIR/scripts/servidor.py` (puerto 8765) con la herramienta de previsualización o en segundo plano, y abre `http://localhost:8765/c/<carpeta>`. Ahí Yadira ve las slides, puede retocar el copy y tiene el botón **Publicar en Instagram**.
+3. Envía `vista-previa.png` con SendUserFile y dile qué contiene cada slide en una línea, cuántos créditos se gastaron y el enlace de la página de resultados.
+
+**La publicación la decide Yadira con el botón.** No publiques tú por tu cuenta: es un post público en su Instagram. Si te pide expresamente que lo publiques, confirma antes en el chat (carrusel, número de slides y perfil) y usa `python SKILL_DIR/scripts/upload_post.py publicar "CARPETA"`.
+
+### Cómo funciona la publicación (Upload-Post)
+
+- Configuración en `~/.env-uploadpost`: `UPLOADPOST_API_KEY` (obligatoria) y `UPLOADPOST_USER` (el perfil de Upload-Post; si está vacío y solo hay un perfil con Instagram, se detecta solo). Nunca pidas la clave en el chat; `python SKILL_DIR/scripts/upload_post.py comprobar` valida la clave y lista los perfiles sin publicar nada.
+- `scripts/upload_post.py` envía `POST https://api.upload-post.com/api/upload_photos` en multipart: `user`, `platform[]=instagram`, `title` = el copy, `photos[]` = las slides (convertidas a JPEG de 1440 px), con `async_upload=true`, y consulta `GET /api/uploadposts/status` hasta que Instagram termina.
+- Una `Idempotency-Key` calculada a partir del perfil, el texto y las imágenes evita publicar dos veces si algo se reintenta. El estado queda en `publicacion.json` (`publicado` con la URL del post, `error` con el motivo o `en_proceso`, que se retoma pulsando de nuevo el botón).
+- Errores típicos: 401 clave inválida; 404 perfil inexistente (revisa `UPLOADPOST_USER`); 429 límite mensual del plan; "skipped" el perfil no tiene Instagram conectado (https://app.upload-post.com/manage-users).
 
 ## Estilos y marca
 

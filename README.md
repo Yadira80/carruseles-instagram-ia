@@ -36,11 +36,30 @@ python scripts/kie_carrusel.py avatar --fotos a.jpg b.jpg c.jpg
 python scripts/kie_carrusel.py creditos
 ```
 
+## Publicar en Instagram (Upload-Post)
+
+Crea `~/.env-uploadpost`:
+
+```
+UPLOADPOST_API_KEY=tu_clave
+UPLOADPOST_USER=tu_perfil   # opcional si solo tienes uno con Instagram
+```
+
+Arranca la página de resultados y pulsa **Publicar en Instagram**:
+
+```bash
+python scripts/servidor.py        # http://localhost:8765
+python scripts/upload_post.py comprobar   # valida la clave sin publicar
+```
+
 ## Estructura
 
 ```
 SKILL.md                         instrucciones del agente
 scripts/kie_carrusel.py          generación con Kie.ai (subida de referencias, espera, reanudación)
+scripts/upload_post.py           publicación en Instagram vía Upload-Post (asíncrona, sin duplicados)
+scripts/servidor.py              página de resultados local con el botón de publicar
+assets/web/resultados.html       interfaz de la página de resultados
 assets/estilos/*.json            estilos visuales (paleta, layouts, tipografía, reglas de texto)
 assets/marca/avatar-maestro.png  avatar de referencia
 references/guion.md              guía de guion y portadas

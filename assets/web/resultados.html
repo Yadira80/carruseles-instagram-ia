@@ -1,0 +1,307 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Carruseles IG</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --blush: #FBE9EC; --rosa: #F2C4CE; --rosa-2: #E9AFBD; --rose: #D98BA0; --plum: #4A2B3A;
+    --plum-2: #7A5566; --white: #fff; --line: #EFD3DA; --ok: #2E7D5B; --ok-bg: #E7F5EE;
+    --err: #B3261E; --err-bg: #FDECEA; --radius: 20px; --shadow: 0 10px 30px rgba(74, 43, 58, .10);
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: Poppins, system-ui, sans-serif; color: var(--plum);
+         background: linear-gradient(180deg, var(--blush), #fff 420px); min-height: 100vh; }
+  a { color: inherit; }
+  button { font: inherit; cursor: pointer; border: 0; }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 24px 16px 64px; }
+  header { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 28px; }
+  .brand { display: flex; align-items: center; gap: 12px; text-decoration: none; }
+  .logo { width: 42px; height: 42px; border-radius: 50%; background: var(--rose); color: #fff; display: grid; place-items: center; font-weight: 800; }
+  .brand h1 { font-size: 20px; margin: 0; font-weight: 800; }
+  .brand small { display: block; color: var(--plum-2); font-size: 13px; }
+  .pill { display: inline-flex; align-items: center; gap: 8px; background: #fff; border: 1px solid var(--line); border-radius: 999px; padding: 8px 14px; font-size: 13px; }
+  .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--ok); }
+  .dot.off { background: var(--err); }
+
+  /* Índice */
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 20px; }
+  .card { background: #fff; border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; text-decoration: none; transition: transform .15s; }
+  .card:hover { transform: translateY(-3px); }
+  .card img { width: 100%; aspect-ratio: 4/5; object-fit: cover; display: block; background: var(--rosa); }
+  .card .meta { padding: 14px 16px 16px; }
+  .card h3 { margin: 0 0 6px; font-size: 15px; line-height: 1.3; }
+  .tag { display: inline-block; font-size: 12px; font-weight: 600; padding: 3px 10px; border-radius: 999px; background: var(--blush); color: var(--plum-2); }
+  .tag.pub { background: var(--ok-bg); color: var(--ok); }
+  .tag.err { background: var(--err-bg); color: var(--err); }
+  .empty { background: #fff; border-radius: var(--radius); padding: 40px; text-align: center; box-shadow: var(--shadow); }
+
+  /* Carrusel */
+  .back { display: inline-block; margin-bottom: 16px; text-decoration: none; color: var(--plum-2); font-weight: 500; }
+  .layout { display: grid; grid-template-columns: minmax(0, 1fr) 420px; gap: 32px; align-items: start; }
+  .viewer { background: #fff; border-radius: var(--radius); box-shadow: var(--shadow); padding: 18px; }
+  .track { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; border-radius: 14px; scrollbar-width: none; }
+  .track::-webkit-scrollbar { display: none; }
+  .track img { flex: 0 0 100%; width: 100%; aspect-ratio: 4/5; object-fit: cover; scroll-snap-align: center; }
+  .nav { display: flex; align-items: center; justify-content: space-between; margin-top: 12px; }
+  .nav button { width: 40px; height: 40px; border-radius: 50%; background: var(--blush); color: var(--plum); font-size: 18px; }
+  .nav button:disabled { opacity: .35; cursor: default; }
+  .dots { display: flex; gap: 6px; }
+  .dots span { width: 7px; height: 7px; border-radius: 50%; background: var(--rosa); }
+  .dots span.on { background: var(--rose); width: 18px; border-radius: 4px; }
+  .thumbs { display: flex; gap: 8px; margin-top: 14px; overflow-x: auto; padding-bottom: 4px; }
+  .thumbs img { width: 64px; aspect-ratio: 4/5; object-fit: cover; border-radius: 8px; opacity: .55; cursor: pointer; border: 2px solid transparent; }
+  .thumbs img.on { opacity: 1; border-color: var(--rose); }
+
+  .panel { background: #fff; border-radius: var(--radius); box-shadow: var(--shadow); padding: 22px; position: sticky; top: 16px; }
+  .panel h2 { margin: 0 0 4px; font-size: 22px; line-height: 1.25; font-weight: 800; }
+  .sub { color: var(--plum-2); font-size: 13px; margin: 0 0 18px; }
+  label { font-weight: 600; font-size: 14px; display: block; margin-bottom: 8px; }
+  textarea { width: 100%; min-height: 230px; resize: vertical; border: 1.5px solid var(--line); border-radius: 14px; padding: 14px; font: 14px/1.55 Poppins, system-ui, sans-serif; color: var(--plum); background: #fffafb; }
+  textarea:focus { outline: none; border-color: var(--rose); }
+  .counts { display: flex; justify-content: space-between; font-size: 12px; color: var(--plum-2); margin: 6px 2px 16px; }
+  .counts .bad { color: var(--err); font-weight: 600; }
+  .row { display: flex; gap: 10px; }
+  .btn { border-radius: 14px; padding: 13px 18px; font-weight: 600; font-size: 15px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+  .btn-sec { background: var(--blush); color: var(--plum); }
+  .btn-ig { flex: 1; color: #fff; background: linear-gradient(135deg, #D98BA0, #B85C7A); box-shadow: 0 8px 20px rgba(184, 92, 122, .35); }
+  .btn-ig:disabled, .btn-sec:disabled { opacity: .5; cursor: default; box-shadow: none; }
+  .btn-ig svg { width: 20px; height: 20px; }
+  .status { margin-top: 16px; border-radius: 14px; padding: 14px 16px; font-size: 14px; display: none; }
+  .status.show { display: block; }
+  .status.run { background: var(--blush); }
+  .status.ok { background: var(--ok-bg); color: var(--ok); }
+  .status.err { background: var(--err-bg); color: var(--err); }
+  .status strong { display: block; margin-bottom: 4px; font-size: 15px; }
+  .status a { font-weight: 600; }
+  .log { margin: 8px 0 0; padding: 0; list-style: none; font-size: 12.5px; color: var(--plum-2); max-height: 140px; overflow: auto; }
+  .spinner { width: 16px; height: 16px; border: 2.5px solid var(--rosa); border-top-color: var(--rose); border-radius: 50%; display: inline-block; animation: spin .8s linear infinite; vertical-align: -3px; margin-right: 8px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .warn { background: #FFF6E5; color: #7A4B00; border-radius: 14px; padding: 12px 14px; font-size: 13px; margin-bottom: 16px; }
+  .warn code { font-size: 12px; word-break: break-all; }
+
+  .modal { position: fixed; inset: 0; background: rgba(74, 43, 58, .45); display: none; align-items: center; justify-content: center; padding: 16px; z-index: 10; }
+  .modal.show { display: flex; }
+  .dialog { background: #fff; border-radius: 22px; max-width: 420px; width: 100%; padding: 24px; box-shadow: var(--shadow); }
+  .dialog h3 { margin: 0 0 10px; font-size: 20px; }
+  .dialog p { margin: 0 0 18px; color: var(--plum-2); font-size: 14px; line-height: 1.5; }
+  .dialog .row { justify-content: flex-end; }
+  .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--plum); color: #fff; padding: 10px 18px; border-radius: 999px; font-size: 14px; opacity: 0; transition: opacity .2s; pointer-events: none; }
+  .toast.show { opacity: 1; }
+
+  @media (max-width: 900px) {
+    .layout { grid-template-columns: 1fr; }
+    .panel { position: static; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <a class="brand" href="/"><div class="logo">IA</div><div><h1>Carruseles</h1><small>@yadira.official</small></div></a>
+    <span class="pill" id="cfg"><span class="dot off"></span>Comprobando Upload-Post…</span>
+  </header>
+  <main id="app"></main>
+</div>
+
+<div class="modal" id="modal" role="dialog" aria-modal="true" aria-labelledby="m-title">
+  <div class="dialog">
+    <h3 id="m-title">¿Publicar en Instagram?</h3>
+    <p id="m-text"></p>
+    <div class="row">
+      <button class="btn btn-sec" id="m-cancel">Cancelar</button>
+      <button class="btn btn-ig" id="m-ok" style="flex:0">Sí, publicar</button>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const $ = (s, el = document) => el.querySelector(s);
+const app = $('#app');
+let CONFIG = { clave: false };
+let pollTimer = null;
+
+function h(tag, attrs = {}, ...children) {
+  const el = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (k === 'class') el.className = v;
+    else if (k.startsWith('on')) el.addEventListener(k.slice(2), v);
+    else if (v !== null && v !== undefined) el.setAttribute(k, v);
+  }
+  for (const c of children.flat()) if (c !== null && c !== undefined) el.append(c.nodeType ? c : document.createTextNode(c));
+  return el;
+}
+function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 2200); }
+async function api(path, opts = {}) {
+  const r = await fetch(path, { ...opts, headers: { 'Content-Type': 'application/json', 'X-Carrusel': '1', ...(opts.headers || {}) } });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data.error || `Error ${r.status}`);
+  return data;
+}
+function fmtDate(iso) { if (!iso) return ''; const d = new Date(iso); return d.toLocaleString('es-ES', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' }); }
+function pubTag(p) {
+  if (p.estado === 'publicado') return h('span', { class: 'tag pub' }, 'Publicado');
+  if (p.estado === 'error') return h('span', { class: 'tag err' }, 'Error al publicar');
+  if (p.estado === 'en_proceso') return h('span', { class: 'tag' }, 'Publicando…');
+  return h('span', { class: 'tag' }, 'Sin publicar');
+}
+
+async function loadConfig() {
+  try {
+    CONFIG = await api('/api/config');
+    const pill = $('#cfg');
+    pill.replaceChildren(h('span', { class: 'dot' + (CONFIG.clave ? '' : ' off') }),
+      CONFIG.clave ? `Upload-Post listo${CONFIG.perfil ? ' · ' + CONFIG.perfil : ''}` : 'Falta la clave de Upload-Post');
+  } catch (e) { $('#cfg').textContent = 'Servidor no disponible'; }
+}
+
+/* ------------------------------------------------------------ Índice */
+async function renderIndex() {
+  document.title = 'Carruseles IG';
+  app.replaceChildren(h('p', { class: 'sub' }, 'Cargando…'));
+  const { carruseles } = await api('/api/carruseles');
+  if (!carruseles.length) {
+    app.replaceChildren(h('div', { class: 'empty' }, h('h2', {}, 'Aún no hay carruseles'), h('p', { class: 'sub' }, 'Pide uno con /carrusel-ig y aparecerá aquí.')));
+    return;
+  }
+  app.replaceChildren(h('div', { class: 'grid' }, carruseles.map(c =>
+    h('a', { class: 'card', href: '/c/' + encodeURIComponent(c.slug) },
+      h('img', { src: c.slides[0], alt: 'Portada: ' + c.titulo, loading: 'lazy' }),
+      h('div', { class: 'meta' }, h('h3', {}, c.titulo), pubTag(c.publicacion), ' ',
+        h('span', { class: 'tag' }, `${c.slides.length} slides`))))));
+}
+
+/* ---------------------------------------------------------- Carrusel */
+async function renderCarousel(slug) {
+  clearInterval(pollTimer);
+  const c = await api('/api/c/' + encodeURIComponent(slug));
+  document.title = c.titulo + ' · Carruseles IG';
+  let idx = 0;
+
+  const track = h('div', { class: 'track' }, c.slides.map((s, i) => h('img', { src: s, alt: `Slide ${i + 1} de ${c.slides.length}` })));
+  const dots = h('div', { class: 'dots' }, c.slides.map(() => h('span')));
+  const prev = h('button', { 'aria-label': 'Anterior', onclick: () => go(idx - 1) }, '‹');
+  const next = h('button', { 'aria-label': 'Siguiente', onclick: () => go(idx + 1) }, '›');
+  const thumbs = h('div', { class: 'thumbs' }, c.slides.map((s, i) => h('img', { src: s, alt: `Ir a la slide ${i + 1}`, onclick: () => go(i) })));
+  function go(i) { idx = Math.max(0, Math.min(c.slides.length - 1, i)); track.scrollTo({ left: track.clientWidth * idx, behavior: 'smooth' }); paint(); }
+  function paint() {
+    [...dots.children].forEach((d, i) => d.classList.toggle('on', i === idx));
+    [...thumbs.children].forEach((d, i) => d.classList.toggle('on', i === idx));
+    prev.disabled = idx === 0; next.disabled = idx === c.slides.length - 1;
+  }
+  track.addEventListener('scroll', () => { const i = Math.round(track.scrollLeft / track.clientWidth); if (i !== idx) { idx = i; paint(); } });
+
+  const ta = h('textarea', { id: 'caption', spellcheck: 'true' });
+  ta.value = c.caption;
+  const counts = h('div', { class: 'counts' });
+  function count() {
+    const n = ta.value.length, tags = (ta.value.match(/(^|\s)#[\p{L}\p{N}_]+/gu) || []).length;
+    counts.replaceChildren(h('span', { class: n > 2200 ? 'bad' : '' }, `${n} / 2200 caracteres`), h('span', { class: tags > 30 ? 'bad' : '' }, `${tags} / 30 hashtags`));
+    return n <= 2200 && tags <= 30 && n > 0;
+  }
+  ta.addEventListener('input', count);
+
+  const saveBtn = h('button', { class: 'btn btn-sec', onclick: save }, 'Guardar texto');
+  const igIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor"/></svg>';
+  const pubBtn = h('button', { class: 'btn btn-ig', onclick: askPublish });
+  const status = h('div', { class: 'status', role: 'status', 'aria-live': 'polite' });
+  const warn = CONFIG.clave ? null : h('div', { class: 'warn' }, 'Para publicar, pega tu clave de Upload-Post en ', h('code', {}, CONFIG.archivo || '~/.env-uploadpost'), ' (línea UPLOADPOST_API_KEY=) y recarga la página.');
+
+  let pub = c.publicacion;
+  function setPubButton() {
+    pubBtn.innerHTML = igIcon + (pub.estado === 'publicado' ? ' Publicar de nuevo' : ' Publicar en Instagram');
+    pubBtn.className = 'btn ' + (pub.estado === 'publicado' ? 'btn-sec' : 'btn-ig');
+    pubBtn.style.flex = '1';
+    pubBtn.disabled = !CONFIG.clave;
+  }
+  function showResult(p, log) {
+    pub = p; setPubButton();
+    if (p.estado === 'publicado') {
+      status.className = 'status show ok';
+      status.replaceChildren(h('strong', {}, '¡Publicado en Instagram!'),
+        `Publicado ${fmtDate(p.publicado)}${p.perfil ? ' con el perfil ' + p.perfil : ''}. `,
+        p.url ? h('a', { href: p.url, target: '_blank', rel: 'noopener' }, 'Ver la publicación →') : 'Ya está visible en tu perfil.');
+    } else if (p.estado === 'error') {
+      status.className = 'status show err';
+      status.replaceChildren(h('strong', {}, 'No se pudo publicar'), p.error || 'Error desconocido.', log ? logList(log) : null);
+    } else if (p.estado === 'en_proceso') {
+      status.className = 'status show run';
+      status.replaceChildren(h('strong', {}, 'Publicación sin confirmar'), 'Se envió pero no llegó la confirmación. Pulsa "Publicar en Instagram" para retomarla: no se duplicará.');
+    } else { status.className = 'status'; }
+  }
+  function logList(msgs) { return h('ul', { class: 'log' }, msgs.slice(-6).map(m => h('li', {}, `${m.t} · ${m.m}`))); }
+
+  async function save() {
+    if (!count()) return toast('Revisa el texto: está vacío o supera los límites');
+    try { await api(`/api/c/${encodeURIComponent(slug)}/caption`, { method: 'POST', body: JSON.stringify({ caption: ta.value }) }); toast('Texto guardado'); }
+    catch (e) { toast(e.message); }
+  }
+  function askPublish() {
+    if (!count()) return toast('Revisa el texto: está vacío o supera los límites');
+    const again = pub.estado === 'publicado';
+    $('#m-title').textContent = again ? '¿Publicar otra vez?' : '¿Publicar en Instagram?';
+    $('#m-text').textContent = again
+      ? 'Este carrusel ya está publicado. Si continúas, aparecerá una segunda publicación igual en tu perfil.'
+      : `Se publicarán las ${c.slides.length} slides con el texto actual${CONFIG.perfil ? ' en el perfil ' + CONFIG.perfil : ''}. Será visible al momento para tus seguidores.`;
+    const modal = $('#modal'); modal.classList.add('show');
+    $('#m-ok').onclick = () => { modal.classList.remove('show'); publish(again); };
+    $('#m-cancel').onclick = () => modal.classList.remove('show');
+    $('#m-ok').focus();
+  }
+  async function publish(forzar) {
+    pubBtn.disabled = true; saveBtn.disabled = true; ta.disabled = true;
+    status.className = 'status show run';
+    status.replaceChildren(h('strong', {}, h('span', { class: 'spinner' }), 'Publicando en Instagram…'), 'Esto suele tardar entre 30 segundos y 2 minutos. Puedes dejar esta página abierta.');
+    try {
+      await api(`/api/c/${encodeURIComponent(slug)}/publicar`, { method: 'POST', body: JSON.stringify({ caption: ta.value, forzar }) });
+      poll();
+    } catch (e) {
+      showResult({ estado: 'error', error: e.message });
+      pubBtn.disabled = !CONFIG.clave; saveBtn.disabled = false; ta.disabled = false;
+    }
+  }
+  function poll() {
+    clearInterval(pollTimer);
+    const tick = async () => {
+      try {
+        const j = await api(`/api/c/${encodeURIComponent(slug)}/publicacion`);
+        if (j.activo) {
+          status.className = 'status show run';
+          status.replaceChildren(h('strong', {}, h('span', { class: 'spinner' }), 'Publicando en Instagram…'), logList(j.mensajes));
+          return;
+        }
+        clearInterval(pollTimer);
+        saveBtn.disabled = false; ta.disabled = false;
+        showResult(j.publicacion, j.mensajes);
+      } catch (e) { /* el servidor puede tardar; seguimos intentando */ }
+    };
+    tick(); pollTimer = setInterval(tick, 2500);
+  }
+
+  app.replaceChildren(
+    h('a', { class: 'back', href: '/' }, '← Todos los carruseles'),
+    h('div', { class: 'layout' },
+      h('section', { class: 'viewer', 'aria-label': 'Vista previa del carrusel' }, track, h('div', { class: 'nav' }, prev, dots, next), thumbs),
+      h('aside', { class: 'panel' },
+        h('h2', {}, c.titulo), h('p', { class: 'sub' }, `${c.slides.length} slides · ${c.fecha || ''} `, pubTag(pub)),
+        warn, h('label', { for: 'caption' }, 'Texto del post (copy de Instagram)'), ta, counts,
+        h('div', { class: 'row' }, saveBtn, pubBtn), status)));
+  count(); paint(); setPubButton(); showResult(pub);
+  // Si había una publicación en marcha (p. ej. recargaste la página), seguimos su progreso
+  api(`/api/c/${encodeURIComponent(slug)}/publicacion`).then(j => { if (j.activo) { pubBtn.disabled = true; ta.disabled = true; saveBtn.disabled = true; poll(); } }).catch(() => {});
+}
+
+async function route() {
+  const m = location.pathname.match(/^\/c\/([^/]+)/);
+  try { m ? await renderCarousel(decodeURIComponent(m[1])) : await renderIndex(); }
+  catch (e) { app.replaceChildren(h('div', { class: 'empty' }, h('h2', {}, 'Algo falló'), h('p', { class: 'sub' }, e.message))); }
+}
+document.addEventListener('keydown', e => { if (e.key === 'Escape') $('#modal').classList.remove('show'); });
+loadConfig().then(route);
+</script>
+</body>
+</html>
