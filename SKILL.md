@@ -131,7 +131,7 @@ Si una slide falla, corrige la causa en `carrusel.json` (texto más corto, escen
 python SKILL_DIR/scripts/kie_carrusel.py generar "CARPETA" --solo 3,5
 ```
 
-Si regeneras la **portada** (`--solo 1`), el resto ya no la tendrá como referencia: regenera todo (`--solo 1,2,3,4,5,6,7`) o acepta la diferencia. Máximo dos rondas por slide; si el texto sigue fallando, acórtalo. No entregues slides con faltas.
+Si regeneras la **portada** (`--solo 1`), el resto ya no la tendrá como referencia: regenera todo (`--solo 1,2,3,4,5,6,7`) o acepta la diferencia. **Cuidado:** si cambias el archivo de estilo, cambian los prompts de todas las slides y el script las regenera todas aunque uses `--solo` (sale 7 × 18 créditos). Para arreglar slides sueltas usa `prompt_extra` en `carrusel.json`, no el estilo. Máximo dos rondas por slide; si el texto sigue fallando, acórtalo. No entregues slides con faltas.
 
 ## 8. Entregar y publicar
 
@@ -139,7 +139,16 @@ Si regeneras la **portada** (`--solo 1`), el resto ya no la tendrá como referen
 2. Abre la **página de resultados**: arranca `python SKILL_DIR/scripts/servidor.py` (puerto 8765) con la herramienta de previsualización o en segundo plano, y abre `http://localhost:8765/c/<carpeta>`. Ahí Yadira ve las slides, puede retocar el copy y tiene el botón **Publicar en Instagram**.
 3. Envía `vista-previa.png` con SendUserFile y dile qué contiene cada slide en una línea, cuántos créditos se gastaron y el enlace de la página de resultados.
 
-**La publicación la decide Yadira con el botón.** No publiques tú por tu cuenta: es un post público en su Instagram. Si te pide expresamente que lo publiques, confirma antes en el chat (carrusel, número de slides y perfil) y usa `python SKILL_DIR/scripts/upload_post.py publicar "CARPETA"`.
+**Publicar:** el contenido de la marca de Yadira (@yadira.official) está autorizado; ella pidió (13-oct-2026) que yo programe un carrusel al día. Aun así, revisa todas las slides letra a letra antes de publicar o programar, y no publiques nunca contenido de clientes (es demo). Comandos:
+
+```bash
+python SKILL_DIR/scripts/upload_post.py publicar "CARPETA"                              # ahora
+python SKILL_DIR/scripts/upload_post.py publicar "CARPETA" --programar "2026-10-15 20:00"  # hora de Madrid
+```
+
+Para programar una colección entera (cada carpeta en la fecha de su nombre, `AAAA-MM-DD-…`): `python SKILL_DIR/scripts/upload_post.py programar-coleccion "COLECCIÓN" [--hora 20:00] [--simular]`. Para cancelar una programada: `upload_post.py cancelar "CARPETA"` (devuelve el cupo). **Si cambias los scripts, reinicia el servidor de la página**: carga el módulo al arrancar y con una versión vieja puede publicar algo que ya estaba programado (pasó el 13-oct; hubo que cancelar el duplicado).
+
+Las programadas las publica Upload-Post a esa hora aunque el ordenador esté apagado (`publicacion.json` queda en `programado` con su `job_id`). `GET /api/uploadposts/schedule` lista las programadas. Hora habitual: 20:00. Plan gratuito de Upload-Post: 10 publicaciones al mes (Basic, 24 $/mes, ilimitado).
 
 ### Cómo funciona la publicación (Upload-Post)
 
@@ -148,7 +157,10 @@ Si regeneras la **portada** (`--solo 1`), el resto ya no la tendrá como referen
 - Una `Idempotency-Key` calculada a partir del perfil, el texto y las imágenes evita publicar dos veces si algo se reintenta. El estado queda en `publicacion.json` (`publicado` con la URL del post, `error` con el motivo o `en_proceso`, que se retoma pulsando de nuevo el botón).
 - Errores típicos: 401 clave inválida; 404 perfil inexistente (revisa `UPLOADPOST_USER`); 429 límite mensual del plan; "skipped" el perfil no tiene Instagram conectado (https://app.upload-post.com/manage-users).
 
-## Estilos y marca
+## Estilos, colecciones y personajes
+
+- **Colecciones** (cada una es una carpeta y una sección de la página de resultados): `Documentos/Carrusel Skill/carruseles/` (IA, estilo `rosa-palo-animado`) y `Documentos/Carrusel Skill/Carruseles de motivación/` (mamás y amas de casa que aprenden IA, estilo `motivacion-mama`, con `calendario.md` del mes).
+- **Personajes de la familia** (en `assets/marca/`, fuera de GitHub porque son fotos de sus hijos): `taylor-maestro.png` (su hija adolescente) y `familia-maestro.png` (los cinco). Se usan por slide con `"referencias": ["marca/taylor-maestro.png"]` y un `referencias_desc` que diga quién es. Fotos originales en `~/OneDrive/Imágenes/imagen contenido motivacion/`. Para crear otro personaje: `kie_carrusel.py avatar --nombre X --prompt-archivo prompt.txt --fotos …` (prompts de ejemplo en `assets/marca/prompts/`). En escenas de familia la IA tiende a dejar fuera a alguien o a inventarse un niño pequeño: usa un `prompt_extra` con los cinco descritos uno a uno (hijo ~20 años con pelo rizado; el padre con perilla; hijo ~26 con gafas redondas y gorro negro; Yadira; la hija adolescente con gafas) y "NO small children". Con disfraces es peor: mejor escenas de Yadira con Taylor.
 
 - El estilo vive en `assets/estilos/rosa-palo-animado.json`: paleta, estilo 3D, layouts por tipo de slide, tipografía, reglas de texto, descripción del personaje y textos de referencia. Para un estilo nuevo, copia ese archivo con otro nombre, cámbialo y usa `"estilo": "nuevo-nombre"` en el carrusel.
 - El avatar maestro es `assets/marca/avatar-maestro.png`. Para rehacerlo desde fotos: `python SKILL_DIR/scripts/kie_carrusel.py avatar --fotos f1.jpg f2.jpg f3.jpg --opciones 2` (crea `avatar-opcion-N.png`; copia la elegida como `avatar-maestro.png`). Las fotos originales están en `~/OneDrive/Imágenes/YADIRA/` ("Imagen para avatar", "Imagen avatar 2", "iamgen avatar 3").

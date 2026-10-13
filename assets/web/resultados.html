@@ -37,6 +37,8 @@
   .tag { display: inline-block; font-size: 12px; font-weight: 600; padding: 3px 10px; border-radius: 999px; background: var(--blush); color: var(--plum-2); }
   .tag.pub { background: var(--ok-bg); color: var(--ok); }
   .tag.err { background: var(--err-bg); color: var(--err); }
+  .coleccion + .coleccion { margin-top: 40px; }
+  .col-title { font-size: 20px; font-weight: 800; margin: 0 0 16px; display: flex; align-items: center; gap: 10px; }
   .empty { background: #fff; border-radius: var(--radius); padding: 40px; text-align: center; box-shadow: var(--shadow); }
 
   /* Carrusel */
@@ -147,6 +149,7 @@ function pubTag(p) {
   if (p.estado === 'publicado') return h('span', { class: 'tag pub' }, 'Publicado');
   if (p.estado === 'error') return h('span', { class: 'tag err' }, 'Error al publicar');
   if (p.estado === 'en_proceso') return h('span', { class: 'tag' }, 'Publicando…');
+  if (p.estado === 'programado') return h('span', { class: 'tag pub' }, 'Programado ' + (p.fecha_programada || '').slice(5, 16).replace('T', ' '));
   return h('span', { class: 'tag' }, 'Sin publicar');
 }
 
@@ -168,11 +171,16 @@ async function renderIndex() {
     app.replaceChildren(h('div', { class: 'empty' }, h('h2', {}, 'Aún no hay carruseles'), h('p', { class: 'sub' }, 'Pide uno con /carrusel-ig y aparecerá aquí.')));
     return;
   }
-  app.replaceChildren(h('div', { class: 'grid' }, carruseles.map(c =>
-    h('a', { class: 'card', href: '/c/' + encodeURIComponent(c.slug) },
-      h('img', { src: c.slides[0], alt: 'Portada: ' + c.titulo, loading: 'lazy' }),
-      h('div', { class: 'meta' }, h('h3', {}, c.titulo), pubTag(c.publicacion), ' ',
-        h('span', { class: 'tag' }, `${c.slides.length} slides`))))));
+  const nombres = { carruseles: 'Inteligencia artificial' };
+  const grupos = {};
+  for (const c of carruseles) (grupos[c.coleccion] ||= []).push(c);
+  app.replaceChildren(...Object.entries(grupos).map(([col, items]) => h('section', { class: 'coleccion' },
+    h('h2', { class: 'col-title' }, nombres[col] || col, h('span', { class: 'tag' }, `${items.length}`)),
+    h('div', { class: 'grid' }, items.map(c =>
+      h('a', { class: 'card', href: '/c/' + encodeURIComponent(c.slug) },
+        h('img', { src: c.slides[0], alt: 'Portada: ' + c.titulo, loading: 'lazy' }),
+        h('div', { class: 'meta' }, h('h3', {}, c.titulo), pubTag(c.publicacion), ' ',
+          h('span', { class: 'tag' }, `${c.slides.length} slides`))))))));
 }
 
 /* ---------------------------------------------------------- Carrusel */
@@ -228,6 +236,10 @@ async function renderCarousel(slug) {
     } else if (p.estado === 'error') {
       status.className = 'status show err';
       status.replaceChildren(h('strong', {}, 'No se pudo publicar'), p.error || 'Error desconocido.', log ? logList(log) : null);
+    } else if (p.estado === 'programado') {
+      status.className = 'status show ok';
+      status.replaceChildren(h('strong', {}, 'Programado'), `Upload-Post lo publicará automáticamente el ${(p.fecha_programada || '').replace('T', ' a las ').slice(0, 30)}.`);
+      pubBtn.disabled = true;
     } else if (p.estado === 'en_proceso') {
       status.className = 'status show run';
       status.replaceChildren(h('strong', {}, 'Publicación sin confirmar'), 'Se envió pero no llegó la confirmación. Pulsa "Publicar en Instagram" para retomarla: no se duplicará.');

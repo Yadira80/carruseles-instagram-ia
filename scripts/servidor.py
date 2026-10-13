@@ -2,7 +2,7 @@
 """Página de resultados de los carruseles, con botón "Publicar en Instagram".
 
 Uso:
-    python servidor.py [--raiz CARPETA_CARRUSELES] [--puerto 8765]
+    python servidor.py [--raiz CARPETA1 CARPETA2 ...] [--puerto 8765]
 Luego abre http://localhost:8765
 
 Solo escucha en 127.0.0.1. La clave de Upload-Post se queda en este proceso (nunca llega
@@ -25,7 +25,9 @@ import upload_post  # noqa: E402
 
 SKILL_DIR = Path(__file__).resolve().parent.parent
 PAGE = SKILL_DIR / "assets" / "web" / "resultados.html"
-DEFAULT_ROOT = Path.home() / "OneDrive" / "Documentos" / "Carrusel Skill" / "carruseles"
+PROJECT = Path.home() / "OneDrive" / "Documentos" / "Carrusel Skill"
+# Cada carpeta es una colección que aparece en la página (IA, motivación…)
+DEFAULT_ROOTS = [PROJECT / "carruseles", PROJECT / "Carruseles de motivación"]
 
 try:
     sys.stdout.reconfigure(encoding="utf-8")
@@ -37,13 +39,14 @@ JOBS = {}  # slug -> {"activo": bool, "mensajes": [..]}
 JOBS_LOCK = threading.Lock()
 
 
-def carousel_dir(root, slug):
+def carousel_dir(roots, slug):
     if not slug or "/" in slug or "\\" in slug or slug.startswith("."):
         return None
-    d = (root / slug).resolve()
-    if d.parent != root.resolve() or not (d / "slides").is_dir():
-        return None
-    return d
+    for root in roots:
+        d = (root / slug).resolve()
+        if d.parent == root.resolve() and (d / "slides").is_dir():
+            return d
+    return None
 
 
 def carousel_summary(root, d):
@@ -58,11 +61,12 @@ def carousel_summary(root, d):
     pub = upload_post.read_estado(d)
     return {
         "slug": d.name,
+        "coleccion": d.parent.name,
         "titulo": titulo,
         "fecha": d.name[:10] if d.name[:4].isdigit() else "",
         "slides": [f"/archivos/{urllib.parse.quote(d.name)}/slides/{urllib.parse.quote(f.name)}" for f in slides],
         "caption": upload_post.read_caption(d),
-        "publicacion": {k: pub.get(k) for k in ("estado", "url", "error", "publicado", "perfil", "actualizado")},
+        "publicacion": {k: pub.get(k) for k in ("estado", "url", "error", "publicado", "perfil", "actualizado", "fecha_programada")},
         "modificado": max((f.stat().st_mtime for f in slides), default=d.stat().st_mtime),
     }
 
@@ -158,8 +162,8 @@ class Handler(BaseHTTPRequestHandler):
             return self._json(404, {"error": "archivo no encontrado"})
 
         if parts[:2] == ["api", "carruseles"]:
-            items = [carousel_summary(root, d) for d in root.iterdir() if carousel_dir(root, d.name)] \
-                if root.exists() else []
+            items = [carousel_summary(r, d) for r in root if r.exists()
+                     for d in r.iterdir() if carousel_dir([r], d.name)]
             items.sort(key=lambda x: x["modificado"], reverse=True)
             return self._json(200, {"carruseles": items})
 
@@ -224,12 +228,16 @@ class Handler(BaseHTTPRequestHandler):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--raiz", default=str(DEFAULT_ROOT), help="carpeta que contiene los carruseles")
+    ap.add_argument("--raiz", nargs="+", default=[str(r) for r in DEFAULT_ROOTS],
+                    help="carpetas que contienen carruseles (una por colección)")
     ap.add_argument("--puerto", type=int, default=8765)
     args = ap.parse_args()
     server = ThreadingHTTPServer(("127.0.0.1", args.puerto), Handler)
-    server.root = Path(args.raiz).resolve()
-    print(f"Página de resultados: http://localhost:{args.puerto}  (carruseles en {server.root})", flush=True)
+    server.root = [Path(r).resolve() for r in args.raiz]
+    for r in server.root:
+        r.mkdir(parents=True, exist_ok=True)
+    print(f"Página de resultados: http://localhost:{args.puerto}  (colecciones: "
+          f"{', '.join(r.name for r in server.root)})", flush=True)
     try:
         server.serve_forever()
     except KeyboardInterrupt:

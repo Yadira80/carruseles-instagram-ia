@@ -622,11 +622,12 @@ def cmd_avatar(args):
     out.mkdir(parents=True, exist_ok=True)
     estado = Estado(out / "_estado-avatar.json")
     urls = [estado.upload_url(Path(f), key) for f in args.fotos]
-    prompt = style["prompt_avatar"]
+    prompt = (Path(args.prompt_archivo).read_text(encoding="utf-8") if args.prompt_archivo
+              else style["prompt_avatar"])
     if args.notas:
         prompt += "\n\nADDITIONAL NOTES: " + args.notas
     model = args.modelo or DEFAULT_MODEL
-    inp = {"prompt": prompt, "image_input": urls, "aspect_ratio": "3:4", "resolution": "2K",
+    inp = {"prompt": prompt, "image_input": urls, "aspect_ratio": args.formato, "resolution": "2K",
            "output_format": "png"}
 
     def one(i):
@@ -634,7 +635,7 @@ def cmd_avatar(args):
             tid = create_task(key, model, inp)
             log(f"[opción {i}] tarea {tid}")
             url, _ = wait_task(key, tid, f"opción {i}", args.timeout)
-            dest = download(url, out / f"avatar-opcion-{i}")
+            dest = download(url, out / f"{args.nombre}-opcion-{i}")
             log(f"[opción {i}] OK → {dest}")
             return dest
         except (KieError, TimeoutError) as e:
@@ -644,7 +645,7 @@ def cmd_avatar(args):
     with ThreadPoolExecutor(max_workers=args.opciones) as pool:
         files = [f for f in pool.map(one, range(1, args.opciones + 1)) if f]
     print(f"\n{len(files)}/{args.opciones} opciones de avatar en {out}")
-    print("Elige una y cópiala como avatar-maestro.png en esa carpeta.")
+    print(f"Elige una y cópiala como {args.nombre}-maestro.png en esa carpeta.")
     sys.exit(0 if files else 1)
 
 
@@ -674,6 +675,9 @@ def main():
     a.add_argument("--opciones", type=int, default=2)
     a.add_argument("--estilo", default="rosa-palo-animado")
     a.add_argument("--notas", help="indicaciones extra para el avatar")
+    a.add_argument("--prompt-archivo", help="prompt propio (p. ej. para otro personaje o un grupo)")
+    a.add_argument("--nombre", default="avatar", help="prefijo de los archivos (avatar, taylor, familia…)")
+    a.add_argument("--formato", default="3:4", help="aspect ratio del avatar (3:4, 4:5, 16:9…)")
     a.add_argument("--out")
     a.add_argument("--modelo")
     a.add_argument("--timeout", type=int, default=1200)

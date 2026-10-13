@@ -332,7 +332,9 @@ def poll_status(key, request_id, folder, progress, timeout=900):
                           "https://app.upload-post.com (request_id guardado en publicacion.json).")
 
 
-def publicar(folder, caption=None, forzar=False, progress=print):
+def publicar(folder, caption=None, forzar=False, progress=print, programar=None, zona="Europe/Madrid"):
+    """Publica ya, o programa la publicación si se pasa programar="AAAA-MM-DDTHH:MM" (hora de `zona`).
+    Las programadas las publica Upload-Post a esa hora aunque el ordenador esté apagado."""
     folder = Path(folder)
     key, user = require_key()
     files = slide_files(folder)
@@ -344,6 +346,17 @@ def publicar(folder, caption=None, forzar=False, progress=print):
     prev = read_estado(folder)
     if prev.get("estado") == "publicado" and not forzar:
         raise UploadPostError("Este carrusel ya está publicado. Usa 'publicar de nuevo' si de verdad quieres duplicarlo.")
+    if prev.get("estado") == "programado" and not forzar:
+        raise UploadPostError(f"Este carrusel ya está programado para {prev.get('fecha_programada')} "
+                              f"(job {prev.get('job_id')}). Cancélalo en https://app.upload-post.com antes de reprogramar.")
+    if programar:
+        try:
+            when = datetime.fromisoformat(programar.replace(" ", "T"))
+        except ValueError:
+            raise UploadPostError(f"Fecha de programación no válida: {programar} (usa AAAA-MM-DD HH:MM)")
+        if when <= datetime.now():
+            raise UploadPostError(f"La fecha {programar} ya ha pasado.")
+        programar = when.strftime("%Y-%m-%dT%H:%M:%S")
 
     progress("Comprobando tu perfil de Upload-Post…")
     user = resolve_user(key, user)
@@ -359,6 +372,8 @@ def publicar(folder, caption=None, forzar=False, progress=print):
     h.update(str(prev.get("fallos_definitivos", 0)).encode())
     if forzar:
         h.update(str(time.time()).encode())
+    if programar:
+        h.update(programar.encode())
     idem = "carrusel-" + h.hexdigest()[:40]
 
     # Reanudar si ya hay una subida en curso con exactamente el mismo contenido
@@ -368,7 +383,11 @@ def publicar(folder, caption=None, forzar=False, progress=print):
     else:
         request_id = "carrusel-" + uuid.uuid4().hex[:24]
         fields = [("user", user), ("platform[]", "instagram"), ("title", caption),
-                  ("async_upload", "true"), ("request_id", request_id), ("external_id", folder.name[:255])]
+                  ("request_id", request_id), ("external_id", folder.name[:255])]
+        if programar:
+            fields += [("scheduled_date", programar), ("timezone", zona)]
+        else:
+            fields.append(("async_upload", "true"))
         body, ctype = _multipart(fields, [("photos[]", n, c, m) for n, c, m in images])
         write_estado(folder, estado="en_proceso", request_id=request_id, idempotency_key=idem, perfil=user,
                      slides=len(images), inicio=datetime.now().isoformat(timespec="seconds"), error=None, url=None)
@@ -386,6 +405,13 @@ def publicar(folder, caption=None, forzar=False, progress=print):
                     raise
                 progress(f"Fallo de conexión, reintento {attempt + 1}/3 (sin riesgo de duplicar)…")
                 time.sleep(5 * (attempt + 1))
+        if programar:
+            if not payload.get("job_id") and not payload.get("success"):
+                write_estado(folder, estado="error", error=_message(payload))
+                raise UploadPostError("Upload-Post no aceptó la programación: " + _message(payload))
+            progress(f"Programado para {programar} ({zona}).")
+            return write_estado(folder, estado="programado", job_id=payload.get("job_id"),
+                                fecha_programada=f"{programar} {zona}", error=None)
         request_id = payload.get("request_id") or request_id
         write_estado(folder, request_id=request_id)
         done, ok, url, msg = _instagram_result(payload)
@@ -406,6 +432,41 @@ def _finish(folder, ok, url, msg):
     return data
 
 
+def programar_coleccion(args):
+    """Programa en Upload-Post cada carrusel listo cuya carpeta empiece por una fecha futura."""
+    hoy = datetime.now()
+    pendientes = []
+    for d in sorted(Path(args.coleccion).iterdir()):
+        m = re.match(r"(\d{4}-\d{2}-\d{2})-", d.name)
+        if not d.is_dir() or not m or (args.desde and m.group(1) < args.desde):
+            continue
+        cuando = f"{m.group(1)} {args.hora}"
+        estado = read_estado(d).get("estado")
+        if estado in ("programado", "publicado"):
+            print(f"  {d.name}: ya {estado}")
+            continue
+        if datetime.fromisoformat(cuando) <= hoy:
+            print(f"  {d.name}: su fecha ya pasó, se omite")
+            continue
+        if len(slide_files(d)) < 2 or not read_caption(d):
+            print(f"  {d.name}: faltan slides o caption.md, se omite")
+            continue
+        pendientes.append((d, cuando))
+    print(f"{len(pendientes)} carruseles por programar.")
+    for d, cuando in pendientes:
+        if args.simular:
+            print(f"  [simulación] {d.name} → {cuando}")
+            continue
+        try:
+            r = publicar(d, programar=cuando, progress=lambda m: None)
+            print(f"  {d.name} → {r.get('fecha_programada')}")
+        except UploadPostError as e:
+            print(f"  {d.name}: ERROR {e}", file=sys.stderr)
+            if "limit" in str(e).lower() or "429" in str(e):
+                print("Límite del plan de Upload-Post alcanzado; paro aquí.", file=sys.stderr)
+                sys.exit(1)
+
+
 # ------------------------------------------------------------------------ CLI
 
 
@@ -417,6 +478,15 @@ def main():
     p = sub.add_parser("publicar", help="publica CARPETA en Instagram")
     p.add_argument("carpeta")
     p.add_argument("--forzar", action="store_true", help="publica aunque ya conste como publicado")
+    p.add_argument("--programar", help="programa en vez de publicar ya: 'AAAA-MM-DD HH:MM' (hora de Madrid)")
+    pk = sub.add_parser("cancelar", help="cancela la publicación programada de CARPETA en Upload-Post")
+    pk.add_argument("carpeta")
+    pc = sub.add_parser("programar-coleccion",
+                        help="programa cada carrusel de una carpeta en la fecha de su nombre (AAAA-MM-DD-…)")
+    pc.add_argument("coleccion", help="carpeta con los carruseles, p. ej. 'Carruseles de motivación'")
+    pc.add_argument("--hora", default="20:00", help="hora de publicación (Madrid), por defecto 20:00")
+    pc.add_argument("--desde", help="solo carruseles con fecha >= AAAA-MM-DD")
+    pc.add_argument("--simular", action="store_true", help="solo muestra qué se programaría")
     args = ap.parse_args()
     try:
         if args.cmd == "comprobar":
@@ -426,9 +496,22 @@ def main():
             for pr in profiles:
                 print(f"  - {pr['username']}: Instagram {pr['instagram'] or 'NO conectado'}")
             print(f"Perfil que se usará: {resolve_user(key, user)}")
+        elif args.cmd == "cancelar":
+            key, _ = require_key()
+            est = read_estado(args.carpeta)
+            if est.get("estado") != "programado" or not est.get("job_id"):
+                raise UploadPostError(f"Este carrusel no está programado (estado: {est.get('estado')}).")
+            r = _request("DELETE", f"/uploadposts/schedule/{est['job_id']}", key)
+            write_estado(args.carpeta, estado="cancelado", job_id=None, fecha_programada=None)
+            print(f"Cancelado: {_message(r)}")
+        elif args.cmd == "programar-coleccion":
+            programar_coleccion(args)
         else:
-            r = publicar(args.carpeta, forzar=args.forzar, progress=lambda m: print(m, flush=True))
-            if r.get("estado") == "publicado":
+            r = publicar(args.carpeta, forzar=args.forzar, programar=args.programar,
+                         progress=lambda m: print(m, flush=True))
+            if r.get("estado") == "programado":
+                print(f"Programado en Upload-Post para {r.get('fecha_programada')} (job {r.get('job_id')})")
+            elif r.get("estado") == "publicado":
                 print(f"¡Publicado en Instagram! {r.get('url') or ''}")
             else:
                 print(f"ERROR: {r.get('error')}", file=sys.stderr)

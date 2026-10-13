@@ -4,3 +4,8 @@ __pycache__/
 assets/marca/_estado-avatar.json
 assets/marca/avatar-opcion-*.png
 .env*
+
+# Personajes de la familia: NO se suben al repositorio público
+assets/marca/taylor-*
+assets/marca/familia-*
+assets/marca/_estado-*.json
