@@ -11,6 +11,7 @@ no puede enviar a localhost sin CORS, y se comprueba la cabecera Host.
 """
 import argparse
 import json
+import os
 import mimetypes
 import sys
 import threading
@@ -164,7 +165,7 @@ class Handler(BaseHTTPRequestHandler):
         if parts[:2] == ["api", "carruseles"]:
             items = [carousel_summary(r, d) for r in root if r.exists()
                      for d in r.iterdir() if carousel_dir([r], d.name)]
-            items.sort(key=lambda x: x["modificado"], reverse=True)
+            items.sort(key=lambda x: (x["coleccion"], x["slug"]))
             return self._json(200, {"carruseles": items})
 
         if parts[:2] == ["api", "config"]:
@@ -207,6 +208,24 @@ class Handler(BaseHTTPRequestHandler):
 
         if parts[3] == "caption":
             (d / "caption.md").write_text(caption + "\n", encoding="utf-8")
+            return self._json(200, {"ok": True})
+
+        if parts[3] == "abrir-carpeta":
+            # Publicación a mano: JPEG de 1440 px, numerados en orden, listos para subir a Instagram
+            files = upload_post.slide_files(d)
+            if not files:
+                return self._json(400, {"error": "Este carrusel no tiene slides."})
+            upload_post.prepare_images(d, files)
+            try:
+                os.startfile(str(d / "_publicar"))
+            except (AttributeError, OSError) as e:
+                return self._json(500, {"error": f"No pude abrir la carpeta: {e}", "ruta": str(d / "_publicar")})
+            return self._json(200, {"ok": True, "ruta": str(d / "_publicar")})
+
+        if parts[3] == "marcar-publicado":
+            url = str(body.get("url") or "").strip() or None
+            upload_post.write_estado(d, estado="publicado", url=url, error=None, mensaje="Publicado a mano",
+                                     publicado=datetime.now().isoformat(timespec="seconds"))
             return self._json(200, {"ok": True})
 
         if parts[3] == "publicar":

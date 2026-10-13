@@ -38,6 +38,13 @@
   .tag.pub { background: var(--ok-bg); color: var(--ok); }
   .tag.err { background: var(--err-bg); color: var(--err); }
   .coleccion + .coleccion { margin-top: 40px; }
+  .tag.hoy { background: var(--rose); color: #fff; }
+  .manual { margin-top: 18px; border-top: 1px solid var(--line); padding-top: 16px; }
+  .manual h3 { font-size: 15px; margin: 0 0 4px; }
+  .manual .sub { margin-bottom: 12px; }
+  .steps { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .steps .btn { width: 100%; font-size: 14px; padding: 11px 12px; text-decoration: none; }
+  .hint { font-size: 12.5px; color: var(--plum-2); line-height: 1.5; margin: 12px 0 0; }
   .col-title { font-size: 20px; font-weight: 800; margin: 0 0 16px; display: flex; align-items: center; gap: 10px; }
   .empty { background: #fff; border-radius: var(--radius); padding: 40px; text-align: center; box-shadow: var(--shadow); }
 
@@ -172,15 +179,20 @@ async function renderIndex() {
     return;
   }
   const nombres = { carruseles: 'Inteligencia artificial' };
+  const d = new Date(), hoyStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  const card = c => h('a', { class: 'card', href: '/c/' + encodeURIComponent(c.slug) },
+    h('img', { src: c.slides[0], alt: 'Portada: ' + c.titulo, loading: 'lazy' }),
+    h('div', { class: 'meta' }, h('h3', {}, c.titulo), c.fecha === hoyStr ? h('span', { class: 'tag hoy' }, 'Hoy') : null, ' ',
+      pubTag(c.publicacion), ' ', h('span', { class: 'tag' }, `${c.slides.length} slides`)));
+  const deHoy = carruseles.filter(c => c.fecha === hoyStr);
   const grupos = {};
   for (const c of carruseles) (grupos[c.coleccion] ||= []).push(c);
-  app.replaceChildren(...Object.entries(grupos).map(([col, items]) => h('section', { class: 'coleccion' },
-    h('h2', { class: 'col-title' }, nombres[col] || col, h('span', { class: 'tag' }, `${items.length}`)),
-    h('div', { class: 'grid' }, items.map(c =>
-      h('a', { class: 'card', href: '/c/' + encodeURIComponent(c.slug) },
-        h('img', { src: c.slides[0], alt: 'Portada: ' + c.titulo, loading: 'lazy' }),
-        h('div', { class: 'meta' }, h('h3', {}, c.titulo), pubTag(c.publicacion), ' ',
-          h('span', { class: 'tag' }, `${c.slides.length} slides`))))))));
+  app.replaceChildren(
+    deHoy.length ? h('section', { class: 'coleccion' }, h('h2', { class: 'col-title' }, 'Hoy toca publicar'),
+      h('div', { class: 'grid' }, deHoy.map(card))) : null,
+    ...Object.entries(grupos).map(([col, items]) => h('section', { class: 'coleccion' },
+      h('h2', { class: 'col-title' }, nombres[col] || col, h('span', { class: 'tag' }, `${items.length}`)),
+      h('div', { class: 'grid' }, items.map(card)))));
 }
 
 /* ---------------------------------------------------------- Carrusel */
@@ -228,6 +240,7 @@ async function renderCarousel(slug) {
   }
   function showResult(p, log) {
     pub = p; setPubButton();
+    if (typeof manual !== 'undefined') manual.style.display = (p.estado === 'programado' || p.estado === 'publicado') ? 'none' : '';
     if (p.estado === 'publicado') {
       status.className = 'status show ok';
       status.replaceChildren(h('strong', {}, '¡Publicado en Instagram!'),
@@ -235,7 +248,10 @@ async function renderCarousel(slug) {
         p.url ? h('a', { href: p.url, target: '_blank', rel: 'noopener' }, 'Ver la publicación →') : 'Ya está visible en tu perfil.');
     } else if (p.estado === 'error') {
       status.className = 'status show err';
-      status.replaceChildren(h('strong', {}, 'No se pudo publicar'), p.error || 'Error desconocido.', log ? logList(log) : null);
+      const cupo = /l[ií]mite|limit|429/i.test(p.error || '');
+      status.replaceChildren(h('strong', {}, cupo ? 'Se acabó el cupo gratuito de Upload-Post' : 'No se pudo publicar'),
+        cupo ? 'Este mes ya no quedan publicaciones automáticas. Usa «Publicar a mano» aquí debajo: es gratis.' : (p.error || 'Error desconocido.'),
+        log && !cupo ? logList(log) : null);
     } else if (p.estado === 'programado') {
       status.className = 'status show ok';
       status.replaceChildren(h('strong', {}, 'Programado'), `Upload-Post lo publicará automáticamente el ${(p.fecha_programada || '').replace('T', ' a las ').slice(0, 30)}.`);
@@ -245,6 +261,34 @@ async function renderCarousel(slug) {
       status.replaceChildren(h('strong', {}, 'Publicación sin confirmar'), 'Se envió pero no llegó la confirmación. Pulsa "Publicar en Instagram" para retomarla: no se duplicará.');
     } else { status.className = 'status'; }
   }
+  const copyBtn = h('button', { class: 'btn btn-sec', onclick: copyCaption }, '1 · Copiar texto');
+  const folderBtn = h('button', { class: 'btn btn-sec', onclick: openFolder }, '2 · Abrir imágenes');
+  const igLink = h('a', { class: 'btn btn-sec', href: 'https://www.instagram.com/', target: '_blank', rel: 'noopener' }, '3 · Abrir Instagram');
+  const doneBtn = h('button', { class: 'btn btn-ig', onclick: markDone }, '4 · Ya lo he publicado');
+  const manual = h('div', { class: 'manual' },
+    h('h3', {}, 'Publicar a mano (gratis)'),
+    h('p', { class: 'sub' }, 'Para los días sin cupo en Upload-Post.'),
+    h('div', { class: 'steps' }, copyBtn, folderBtn, igLink, doneBtn),
+    h('p', { class: 'hint' }, 'En Instagram pulsa «+ Crear» → «Seleccionar del ordenador» → elige las 7 imágenes en orden (slide-01 a slide-07) → Siguiente → pega el texto con Ctrl + V → Compartir.'));
+  async function copyCaption() {
+    try { await navigator.clipboard.writeText(ta.value); }
+    catch (e) { ta.select(); document.execCommand('copy'); }
+    toast('Texto copiado: pégalo en Instagram con Ctrl + V');
+  }
+  async function openFolder() {
+    try { await api(`/api/c/${encodeURIComponent(slug)}/abrir-carpeta`, { method: 'POST', body: '{}' }); toast('Carpeta abierta: las 7 imágenes están en orden'); }
+    catch (e) { toast(e.message); }
+  }
+  async function markDone() {
+    if (!confirm('¿Ya lo has publicado en Instagram?')) return;
+    const url = prompt('Si quieres, pega aquí el enlace del post (opcional):', '') || '';
+    try {
+      await api(`/api/c/${encodeURIComponent(slug)}/marcar-publicado`, { method: 'POST', body: JSON.stringify({ url }) });
+      showResult({ estado: 'publicado', url: url || null, publicado: new Date().toISOString() });
+      toast('¡Marcado como publicado!');
+    } catch (e) { toast(e.message); }
+  }
+
   function logList(msgs) { return h('ul', { class: 'log' }, msgs.slice(-6).map(m => h('li', {}, `${m.t} · ${m.m}`))); }
 
   async function save() {
@@ -301,7 +345,7 @@ async function renderCarousel(slug) {
       h('aside', { class: 'panel' },
         h('h2', {}, c.titulo), h('p', { class: 'sub' }, `${c.slides.length} slides · ${c.fecha || ''} `, pubTag(pub)),
         warn, h('label', { for: 'caption' }, 'Texto del post (copy de Instagram)'), ta, counts,
-        h('div', { class: 'row' }, saveBtn, pubBtn), status)));
+        h('div', { class: 'row' }, saveBtn, pubBtn), status, manual)));
   count(); paint(); setPubButton(); showResult(pub);
   // Si había una publicación en marcha (p. ej. recargaste la página), seguimos su progreso
   api(`/api/c/${encodeURIComponent(slug)}/publicacion`).then(j => { if (j.activo) { pubBtn.disabled = true; ta.disabled = true; saveBtn.disabled = true; poll(); } }).catch(() => {});

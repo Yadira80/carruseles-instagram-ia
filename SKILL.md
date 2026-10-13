@@ -146,6 +146,8 @@ python SKILL_DIR/scripts/upload_post.py publicar "CARPETA"                      
 python SKILL_DIR/scripts/upload_post.py publicar "CARPETA" --programar "2026-10-15 20:00"  # hora de Madrid
 ```
 
+**Sin cupo en Upload-Post** (plan gratuito = 10/mes): la página de resultados tiene la sección «Publicar a mano (gratis)» con Copiar texto, Abrir imágenes (abre `_publicar/` con los JPEG en orden), Abrir Instagram y «Ya lo he publicado» (marca `publicacion.json` como publicado). El índice destaca arriba el carrusel cuya carpeta tiene la fecha de hoy («Hoy toca publicar»). Desde el 14-oct-2026 Yadira publica así, a mano, cada día, mientras no contrate el plan Basic.
+
 Para programar una colección entera (cada carpeta en la fecha de su nombre, `AAAA-MM-DD-…`): `python SKILL_DIR/scripts/upload_post.py programar-coleccion "COLECCIÓN" [--hora 20:00] [--simular]`. Para cancelar una programada: `upload_post.py cancelar "CARPETA"` (devuelve el cupo). **Si cambias los scripts, reinicia el servidor de la página**: carga el módulo al arrancar y con una versión vieja puede publicar algo que ya estaba programado (pasó el 13-oct; hubo que cancelar el duplicado).
 
 Las programadas las publica Upload-Post a esa hora aunque el ordenador esté apagado (`publicacion.json` queda en `programado` con su `job_id`). `GET /api/uploadposts/schedule` lista las programadas. Hora habitual: 20:00. Plan gratuito de Upload-Post: 10 publicaciones al mes (Basic, 24 $/mes, ilimitado).
