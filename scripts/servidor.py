@@ -12,6 +12,7 @@ no puede enviar a localhost sin CORS, y se comprueba la cabecera Host.
 import argparse
 import json
 import os
+import shutil
 import mimetypes
 import sys
 import threading
@@ -251,11 +252,20 @@ class Handler(BaseHTTPRequestHandler):
             if not files:
                 return self._json(400, {"error": "Este carrusel no tiene slides."})
             upload_post.prepare_images(d, files)
+            # Copia en el Escritorio, en una carpeta fácil de encontrar desde Instagram
+            desk = next((x for x in (Path.home() / "OneDrive" / "Desktop", Path.home() / "OneDrive" / "Escritorio",
+                                     Path.home() / "Desktop") if x.is_dir()), d)
+            dest = desk / "PUBLICAR HOY"
+            dest.mkdir(exist_ok=True)
+            for old in dest.glob("slide-*.jpg"):
+                old.unlink()
+            for f in sorted((d / "_publicar").glob("slide-*.jpg")):
+                shutil.copy2(f, dest / f.name)
             try:
-                os.startfile(str(d / "_publicar"))
+                os.startfile(str(dest))
             except (AttributeError, OSError) as e:
-                return self._json(500, {"error": f"No pude abrir la carpeta: {e}", "ruta": str(d / "_publicar")})
-            return self._json(200, {"ok": True, "ruta": str(d / "_publicar")})
+                return self._json(500, {"error": f"No pude abrir la carpeta: {e}", "ruta": str(dest)})
+            return self._json(200, {"ok": True, "ruta": str(dest)})
 
         if parts[3] == "marcar-publicado":
             url = str(body.get("url") or "").strip() or None

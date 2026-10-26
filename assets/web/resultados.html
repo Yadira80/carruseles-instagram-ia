@@ -273,14 +273,14 @@ async function renderCarousel(slug) {
     h('h3', {}, 'Publicar a mano (gratis)'),
     h('p', { class: 'sub' }, 'Para los días sin cupo en Upload-Post.'),
     h('div', { class: 'steps' }, copyBtn, folderBtn, igLink, doneBtn),
-    h('p', { class: 'hint' }, 'En Instagram pulsa «+ Crear» → «Seleccionar del ordenador» → elige las 7 imágenes en orden (slide-01 a slide-07) → Siguiente → pega el texto con Ctrl + V → Compartir.'));
+    h('p', { class: 'hint' }, 'En Instagram pulsa «+ Crear» → «Seleccionar del ordenador» → en la ventana, entra en Escritorio → «PUBLICAR HOY» → elige las 7 imágenes (clic en slide-01, Mayús + clic en slide-07) → Siguiente → pega el texto con Ctrl + V → Compartir.'));
   async function copyCaption() {
     try { await navigator.clipboard.writeText(ta.value); }
     catch (e) { ta.select(); document.execCommand('copy'); }
     toast('Texto copiado: pégalo en Instagram con Ctrl + V');
   }
   async function openFolder() {
-    try { await api(`/api/c/${encodeURIComponent(slug)}/abrir-carpeta`, { method: 'POST', body: '{}' }); toast('Carpeta abierta: las 7 imágenes están en orden'); }
+    try { await api(`/api/c/${encodeURIComponent(slug)}/abrir-carpeta`, { method: 'POST', body: '{}' }); toast('Imágenes listas en la carpeta «PUBLICAR HOY» de tu Escritorio'); }
     catch (e) { toast(e.message); }
   }
   async function markDone() {
