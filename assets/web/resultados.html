@@ -46,6 +46,8 @@
   .steps .btn { width: 100%; font-size: 14px; padding: 11px 12px; text-decoration: none; }
   .hint { font-size: 12.5px; color: var(--plum-2); line-height: 1.5; margin: 12px 0 0; }
   .col-title { font-size: 20px; font-weight: 800; margin: 0 0 16px; display: flex; align-items: center; gap: 10px; }
+  .clave-input { width: 100%; border: 1.5px solid var(--line); border-radius: 14px; padding: 14px; font: 15px Poppins, system-ui, sans-serif; color: var(--plum); background: #fffafb; }
+  .clave-input:focus { outline: none; border-color: var(--rose); }
   .empty { background: #fff; border-radius: var(--radius); padding: 40px; text-align: center; box-shadow: var(--shadow); }
 
   /* Carrusel */
@@ -165,7 +167,8 @@ async function loadConfig() {
     CONFIG = await api('/api/config');
     const pill = $('#cfg');
     pill.replaceChildren(h('span', { class: 'dot' + (CONFIG.clave ? '' : ' off') }),
-      CONFIG.clave ? `Upload-Post listo${CONFIG.perfil ? ' · ' + CONFIG.perfil : ''}` : 'Falta la clave de Upload-Post');
+      CONFIG.clave ? `Upload-Post listo${CONFIG.perfil ? ' · ' + CONFIG.perfil : ''}`
+        : h('a', { href: '/clave' }, CONFIG.hay_clave ? 'Clave de Upload-Post no válida · cambiarla' : 'Pegar clave de Upload-Post'));
   } catch (e) { $('#cfg').textContent = 'Servidor no disponible'; }
 }
 
@@ -229,7 +232,7 @@ async function renderCarousel(slug) {
   const igIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor"/></svg>';
   const pubBtn = h('button', { class: 'btn btn-ig', onclick: askPublish });
   const status = h('div', { class: 'status', role: 'status', 'aria-live': 'polite' });
-  const warn = CONFIG.clave ? null : h('div', { class: 'warn' }, 'Para publicar, pega tu clave de Upload-Post en ', h('code', {}, CONFIG.archivo || '~/.env-uploadpost'), ' (línea UPLOADPOST_API_KEY=) y recarga la página.');
+  const warn = CONFIG.clave ? null : h('div', { class: 'warn' }, 'Para publicar con el botón, ', h('a', { href: '/clave' }, 'pega aquí tu clave de Upload-Post'), '.');
 
   let pub = c.publicacion;
   function setPubButton() {
@@ -251,6 +254,7 @@ async function renderCarousel(slug) {
       const cupo = /l[ií]mite|limit|429/i.test(p.error || '');
       status.replaceChildren(h('strong', {}, cupo ? 'Se acabó el cupo gratuito de Upload-Post' : 'No se pudo publicar'),
         cupo ? 'Este mes ya no quedan publicaciones automáticas. Usa «Publicar a mano» aquí debajo: es gratis.' : (p.error || 'Error desconocido.'),
+        /401|clave/i.test(p.error || '') ? h('div', {}, h('a', { href: '/clave' }, 'Pegar una clave nueva →')) : null,
         log && !cupo ? logList(log) : null);
     } else if (p.estado === 'programado') {
       status.className = 'status show ok';
@@ -351,8 +355,48 @@ async function renderCarousel(slug) {
   api(`/api/c/${encodeURIComponent(slug)}/publicacion`).then(j => { if (j.activo) { pubBtn.disabled = true; ta.disabled = true; saveBtn.disabled = true; poll(); } }).catch(() => {});
 }
 
+/* ------------------------------------------------------------ Clave */
+function renderClave() {
+  document.title = 'Clave de Upload-Post · Carruseles IG';
+  const input = h('input', { type: 'password', id: 'clave', autocomplete: 'off', spellcheck: 'false',
+    placeholder: 'Pega aquí tu clave (Ctrl + V)', class: 'clave-input' });
+  const ver = h('button', { class: 'btn btn-sec', type: 'button', onclick: () => { input.type = input.type === 'password' ? 'text' : 'password'; } }, 'Ver / ocultar');
+  const btn = h('button', { class: 'btn btn-ig', type: 'submit' }, 'Guardar y comprobar');
+  const status = h('div', { class: 'status', role: 'status', 'aria-live': 'polite' });
+  const form = h('form', { onsubmit: async e => {
+    e.preventDefault();
+    btn.disabled = true;
+    status.className = 'status show run';
+    status.replaceChildren(h('strong', {}, h('span', { class: 'spinner' }), 'Comprobando con Upload-Post…'));
+    try {
+      const r = await api('/api/config/clave', { method: 'POST', body: JSON.stringify({ clave: input.value.trim() }) });
+      input.value = '';
+      const ig = r.perfiles.filter(p => p.instagram);
+      status.className = 'status show ok';
+      status.replaceChildren(h('strong', {}, '¡Clave guardada y funcionando!'),
+        ig.length ? `Instagram conectado: ${ig.map(p => p.instagram).join(', ')}. ` : 'Ojo: ningún perfil tiene Instagram conectado. ',
+        h('a', { href: '/' }, 'Volver a mis carruseles →'));
+      loadConfig();
+    } catch (err) {
+      status.className = 'status show err';
+      status.replaceChildren(h('strong', {}, 'No se ha guardado'), err.message);
+    } finally { btn.disabled = false; }
+  } },
+    h('label', { for: 'clave' }, 'Tu clave de API de Upload-Post'), input,
+    h('div', { class: 'row', style: 'margin-top:12px' }, ver, btn), status);
+  app.replaceChildren(
+    h('a', { class: 'back', href: '/' }, '← Todos los carruseles'),
+    h('section', { class: 'panel', style: 'max-width:560px;position:static' },
+      h('h2', {}, 'Conectar Upload-Post'),
+      h('p', { class: 'sub' }, 'Cópiala en ', h('a', { href: 'https://app.upload-post.com', target: '_blank', rel: 'noopener' }, 'app.upload-post.com'),
+        ' → API Keys. Se guarda solo en tu ordenador y nunca se muestra.'),
+      form));
+  input.focus();
+}
+
 async function route() {
   const m = location.pathname.match(/^\/c\/([^/]+)/);
+  if (location.pathname === '/clave') return renderClave();
   try { m ? await renderCarousel(decodeURIComponent(m[1])) : await renderIndex(); }
   catch (e) { app.replaceChildren(h('div', { class: 'empty' }, h('h2', {}, 'Algo falló'), h('p', { class: 'sub' }, e.message))); }
 }

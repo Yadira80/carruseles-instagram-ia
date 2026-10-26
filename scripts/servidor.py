@@ -145,7 +145,7 @@ class Handler(BaseHTTPRequestHandler):
         root = self.server.root
         parts = [urllib.parse.unquote(p) for p in urllib.parse.urlparse(self.path).path.strip("/").split("/") if p]
 
-        if not parts or parts[0] == "c":
+        if not parts or parts[0] in ("c", "clave"):
             body = PAGE.read_bytes()
             self.send_response(200)
             self.send_header("Content-Type", "text/html; charset=utf-8")
@@ -170,7 +170,14 @@ class Handler(BaseHTTPRequestHandler):
 
         if parts[:2] == ["api", "config"]:
             key, user = upload_post.load_config()
-            return self._json(200, {"clave": bool(key), "perfil": user or None,
+            valida = False
+            if key:
+                try:
+                    upload_post.list_profiles(key)
+                    valida = True
+                except upload_post.UploadPostError:
+                    valida = False
+            return self._json(200, {"clave": valida, "hay_clave": bool(key), "perfil": user or None,
                                     "archivo": str(upload_post.ENV_FILE)})
 
         if parts[0] == "api" and len(parts) >= 3 and parts[1] == "c":
@@ -188,12 +195,40 @@ class Handler(BaseHTTPRequestHandler):
 
         return self._json(404, {"error": "no encontrado"})
 
+    def _guardar_clave(self):
+        """Valida una clave nueva de Upload-Post y la guarda en ~/.env-uploadpost (nunca la devuelve)."""
+        try:
+            clave = str(self._body().get("clave", "")).strip()
+        except ValueError:
+            return self._json(400, {"error": "Petición no válida"})
+        if len(clave) < 20 or any(c.isspace() for c in clave):
+            return self._json(400, {"error": "Eso no parece una clave de Upload-Post. Cópiala entera desde API Keys."})
+        try:
+            perfiles = upload_post.list_profiles(clave)
+        except upload_post.UploadPostError as e:
+            return self._json(400, {"error": f"Upload-Post no acepta esa clave: {e}"})
+        env = upload_post.ENV_FILE
+        lines = env.read_text(encoding="utf-8-sig").splitlines() if env.exists() else []
+        out, puesta = [], False
+        for line in lines:
+            if line.strip().startswith("UPLOADPOST_API_KEY"):
+                out.append(f"UPLOADPOST_API_KEY={clave}")
+                puesta = True
+            else:
+                out.append(line)
+        if not puesta:
+            out.append(f"UPLOADPOST_API_KEY={clave}")
+        env.write_text("\n".join(out) + "\n", encoding="utf-8")
+        return self._json(200, {"ok": True, "perfiles": perfiles})
+
     # ------------------------------------------------------------------ POST
     def do_POST(self):
         if not self._host_ok() or self.headers.get("X-Carrusel") != "1":
             return self._json(403, {"error": "petición no permitida"})
         root = self.server.root
         parts = [urllib.parse.unquote(p) for p in urllib.parse.urlparse(self.path).path.strip("/").split("/") if p]
+        if parts == ["api", "config", "clave"]:
+            return self._guardar_clave()
         if len(parts) != 4 or parts[:2] != ["api", "c"]:
             return self._json(404, {"error": "no encontrado"})
         d = carousel_dir(root, parts[2])
