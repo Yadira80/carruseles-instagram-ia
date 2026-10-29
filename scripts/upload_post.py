@@ -410,6 +410,7 @@ def publicar(folder, caption=None, forzar=False, progress=print, programar=None,
                 write_estado(folder, estado="error", error=_message(payload))
                 raise UploadPostError("Upload-Post no aceptó la programación: " + _message(payload))
             progress(f"Programado para {programar} ({zona}).")
+            archivar(folder)
             return write_estado(folder, estado="programado", job_id=payload.get("job_id"),
                                 fecha_programada=f"{programar} {zona}", error=None)
         request_id = payload.get("request_id") or request_id
@@ -422,10 +423,34 @@ def publicar(folder, caption=None, forzar=False, progress=print, programar=None,
     return _finish(folder, ok, url, msg)
 
 
+ARCHIVO = Path.home() / "OneDrive" / "Imágenes" / "YADI INSTAGRAM"
+
+
+def archivar(folder):
+    """Copia las slides de un carrusel publicado (o programado) a Imágenes/YADI INSTAGRAM/<fecha - título>.
+    Yadira pidió (29-oct-2026) guardar ahí todo lo que se publique en su Instagram."""
+    import shutil
+    folder = Path(folder)
+    try:
+        titulo = json.loads((folder / "carrusel.json").read_text(encoding="utf-8")).get("titulo") or folder.name
+    except (OSError, ValueError):
+        titulo = folder.name
+    fecha = folder.name[:10] if re.match(r"\d{4}-\d{2}-\d{2}", folder.name) else datetime.now().strftime("%Y-%m-%d")
+    nombre = re.sub(r'[<>:"/\|?*¿]', "", f"{fecha} - {titulo}").strip(" .")
+    if not ARCHIVO.parent.is_dir():
+        return None
+    dst = ARCHIVO / nombre
+    dst.mkdir(parents=True, exist_ok=True)
+    for f in slide_files(folder):
+        shutil.copy2(f, dst / f.name)
+    return dst
+
+
 def _finish(folder, ok, url, msg):
     if ok:
         data = write_estado(folder, estado="publicado", url=url, mensaje=msg, error=None,
                             publicado=datetime.now().isoformat(timespec="seconds"))
+        archivar(folder)
     else:
         fallos = read_estado(folder).get("fallos_definitivos", 0) + 1
         data = write_estado(folder, estado="error", error=msg, fallos_definitivos=fallos)

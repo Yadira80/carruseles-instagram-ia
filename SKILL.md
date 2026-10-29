@@ -146,6 +146,8 @@ python SKILL_DIR/scripts/upload_post.py publicar "CARPETA"                      
 python SKILL_DIR/scripts/upload_post.py publicar "CARPETA" --programar "2026-10-15 20:00"  # hora de Madrid
 ```
 
+**Archivo de lo publicado:** todo carrusel que se publica, se programa o se marca como publicado se copia solo (`upload_post.archivar`) a `~/OneDrive/Imágenes/YADI INSTAGRAM/AAAA-MM-DD - título/`. Yadira lo pidió el 29-oct-2026; si publicas por otra vía, cópialo tú ahí también.
+
 **Sin cupo en Upload-Post** (plan gratuito = 10/mes): la página de resultados tiene la sección «Publicar a mano (gratis)» con Copiar texto, Abrir imágenes (abre `_publicar/` con los JPEG en orden), Abrir Instagram y «Ya lo he publicado» (marca `publicacion.json` como publicado). El índice destaca arriba el carrusel cuya carpeta tiene la fecha de hoy («Hoy toca publicar»). Desde el 14-oct-2026 Yadira publica así, a mano, cada día, mientras no contrate el plan Basic.
 
 Para programar una colección entera (cada carpeta en la fecha de su nombre, `AAAA-MM-DD-…`): `python SKILL_DIR/scripts/upload_post.py programar-coleccion "COLECCIÓN" [--hora 20:00] [--simular]`. Para cancelar una programada: `upload_post.py cancelar "CARPETA"` (devuelve el cupo). **Si cambias los scripts, reinicia el servidor de la página**: carga el módulo al arrancar y con una versión vieja puede publicar algo que ya estaba programado (pasó el 13-oct; hubo que cancelar el duplicado).

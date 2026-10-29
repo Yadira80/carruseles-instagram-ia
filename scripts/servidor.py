@@ -271,6 +271,7 @@ class Handler(BaseHTTPRequestHandler):
             url = str(body.get("url") or "").strip() or None
             upload_post.write_estado(d, estado="publicado", url=url, error=None, mensaje="Publicado a mano",
                                      publicado=datetime.now().isoformat(timespec="seconds"))
+            upload_post.archivar(d)
             return self._json(200, {"ok": True})
 
         if parts[3] == "publicar":
